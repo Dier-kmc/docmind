@@ -1,42 +1,34 @@
-// types/index.ts
 export interface Document {
   id: string
-  user_id: string
   name: string
-  original_name: string
-  size: number
-  type: string
-  url: string
+  file_type: "pdf" | "docx"
+  file_url: string
+  chunk_count: number
   created_at: string
-  updated_at: string
+}
+
+export interface Chunk {
+  id: string
+  content: string
+  chunk_index: number
+  token_count: number
+}
+
+export interface Source {
+  content: string
+  similarity: number
+  chunk_index: number
 }
 
 export interface Message {
   id: string
-  role: 'user' | 'assistant'
+  role: "user" | "assistant"
   content: string
   sources?: Source[]
   timestamp: Date
 }
 
-export interface Source {
-  text: string
-  page: number
-  score: number
-  document_name: string
-}
-
 export interface ChatResponse {
-  answer: string
+  content: string
   sources: Source[]
-  context: string[]
-}
-
-export interface Chunk {
-  id: string
-  document_id: string
-  text: string
-  page: number
-  embedding: number[]
-  created_at: string
 }

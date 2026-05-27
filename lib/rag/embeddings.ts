@@ -1,38 +1,38 @@
-import { OpenAIEmbeddings } from "@langchain/openai"
+import { HfInference } from "@huggingface/inference"
 
-// Safe fallback initializer
-const getEmbeddingModel = () => {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error("Missing OPENAI_API_KEY environment configuration variable.")
-  }
-  return new OpenAIEmbeddings({
-    openAIApiKey: process.env.OPENAI_API_KEY,
-    modelName: "text-embedding-3-small", 
+export const EMBEDDING_DIMENSION = 384
+
+const hf = new HfInference(process.env.HUGGINGFACE_API_KEY)
+
+const getEmbedding = async (text: string): Promise<number[]> => {
+  const result = await hf.featureExtraction({
+    model: "sentence-transformers/all-MiniLM-L6-v2",
+    inputs: text,
   })
+
+  return result as number[]
 }
 
-/**
- * Transforms a text string into a 1536-dimensional float vector array
- */
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
-    const embeddings = getEmbeddingModel()
-    return await embeddings.embedQuery(text)
+    return await getEmbedding(text)
   } catch (error: any) {
-    console.error("OpenAI Embedding generation failed:", error)
-    throw new Error(`Failed to generate mathematical vector: ${error.message}`)
+    console.error("HuggingFace embedding failed:", error)
+    throw new Error(`Failed to generate embedding: ${error.message}`)
   }
 }
 
-/**
- * Batches text arrays to speed up large document indexing
- */
-export async function generateBatchEmbeddings(texts: string[]): Promise<number[][]> {
+export async function generateBatchEmbeddings(
+  texts: string[],
+): Promise<number[][]> {
   try {
-    const embeddings = getEmbeddingModel()
-    return await embeddings.embedDocuments(texts)
+    const result = await hf.featureExtraction({
+      model: "sentence-transformers/all-MiniLM-L6-v2",
+      inputs: texts,
+    })
+    return result as number[][]
   } catch (error: any) {
-    console.error("OpenAI Batch Embedding generation failed:", error)
-    throw new Error(`Failed to generate batch vectors: ${error.message}`)
+    console.error("HuggingFace batch embedding failed:", error)
+    throw new Error(`Failed to generate batch embeddings: ${error.message}`)
   }
 }
