@@ -14,12 +14,14 @@ export interface BuiltContext {
  * @param sources Liste des chunks extraits
  * @param tokenBudget Budget optionnel (ex: 8000 pour les résumés globaux)
  */
-export function buildContext(sources: Source[], tokenBudget: number = DEFAULT_CONTEXT_TOKENS): BuiltContext {
+export function buildContext(
+  sources: Source[],
+  maxTokens: number = 3000  // ✅ paramètre ajouté
+): BuiltContext {
   if (sources.length === 0) {
     return { contextText: "", sources: [], totalTokens: 0 }
   }
 
-  // Trie par similarité décroissante
   const sorted = [...sources].sort((a, b) => b.similarity - a.similarity)
 
   let contextText  = ""
@@ -28,10 +30,7 @@ export function buildContext(sources: Source[], tokenBudget: number = DEFAULT_CO
 
   for (const source of sorted) {
     const estimatedTokens = Math.ceil(source.content.length / CHARS_PER_TOKEN)
-
-    // Respecte le budget de tokens configuré dynamiquement
-    if (totalTokens + estimatedTokens > tokenBudget) break
-
+    if (totalTokens + estimatedTokens > maxTokens) break  // ✅ utilise maxTokens
     contextText  += `\n\n---\n${source.content}`
     totalTokens  += estimatedTokens
     usedSources.push(source)

@@ -2,11 +2,12 @@ import { auth } from "@/lib/auth"
 import { redirect, notFound } from "next/navigation"
 import { supabaseAdmin } from "@/lib/supabase"
 import { ChatInterface } from "@/components/chat/chat-interface"
-import { PdfViewer } from "@/components/viewer/pdf-viewer"
+import { ClientPdfViewer } from "@/components/viewer/client-pdf-viewer"
 
 interface Props {
   params: Promise<{ docId: string }>
 }
+
 
 export default async function DocumentPage({ params }: Props) {
   const session = await auth()
@@ -31,7 +32,11 @@ export default async function DocumentPage({ params }: Props) {
 
       {isPdf && (
         <div className="w-[45%] border-r border-border shrink-0 overflow-hidden">
-          <PdfViewer
+          {/* <PdfViewer
+            fileUrl={document.file_url}
+            fileName={document.name}
+          /> */}
+          <ClientPdfViewer
             fileUrl={document.file_url}
             fileName={document.name}
           />
@@ -44,7 +49,6 @@ export default async function DocumentPage({ params }: Props) {
           userName={session.user.name}
         />
       </div>
-
     </div>
   )
 }
