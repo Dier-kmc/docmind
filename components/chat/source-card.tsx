@@ -1,89 +1,70 @@
 "use client"
 
 import { useState } from "react"
-import { motion } from "framer-motion"
-import { FileText, ChevronDown, ChevronUp, ExternalLink } from "lucide-react"
-import type { Source } from "@/types"
+import { ChevronDown, ChevronUp, Quote } from "lucide-react"
+import { Source } from "@/types"
 
-interface SourceCardProps {
-  source: Source
+interface Props {
+  sources: Source[]
 }
 
-export function SourceCard({ source }: SourceCardProps) {
+export function SourceCard({ sources }: Props) {
   const [expanded, setExpanded] = useState(false)
 
-  const getScoreColor = (score: number) => {
-    if (score >= 0.8) return "text-emerald-400"
-    if (score >= 0.6) return "text-amber-400"
-    return "text-zinc-400"
-  }
-
-  const getScoreLabel = (score: number) => {
-    if (score >= 0.8) return "High relevance"
-    if (score >= 0.6) return "Medium relevance"
-    return "Low relevance"
-  }
+  if (!sources || sources.length === 0) return null
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="rounded-xl border border-white/10 bg-white/5 overflow-hidden hover:border-primary/30 transition-all duration-200"
-    >
+    <div className="mt-3 space-y-1.5">
+      {/* Toggle */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full p-3 text-left flex items-start justify-between gap-2 hover:bg-white/5 transition-colors"
+        className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
       >
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <FileText className="w-3.5 h-3.5 text-primary" />
-            <span className="text-xs font-medium text-zinc-300">
-              Page {source.page}
-            </span>
-            <span className={`text-xs font-semibold ${getScoreColor(source.score)}`}>
-              {Math.round(source.score * 100)}% match
-            </span>
-          </div>
-          <p className="text-sm text-zinc-400 line-clamp-2">
-            {source.text}
-          </p>
-        </div>
-        {expanded ? (
-          <ChevronUp className="w-4 h-4 text-zinc-500 flex-shrink-0" />
-        ) : (
-          <ChevronDown className="w-4 h-4 text-zinc-500 flex-shrink-0" />
-        )}
+        <Quote size={11} />
+        {sources.length} source{sources.length > 1 ? "s" : ""} •{" "}
+        {expanded
+          ? "Hide • Masquer"
+          : "Show • Afficher"}
+        {expanded
+          ? <ChevronUp size={11} />
+          : <ChevronDown size={11} />
+        }
       </button>
 
+      {/* Sources list */}
       {expanded && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          className="border-t border-white/10 p-3 space-y-2"
-        >
-          <p className="text-sm text-zinc-300 leading-relaxed">
-            {source.text}
-          </p>
-          <div className="flex items-center justify-between pt-2">
-            <div className="flex items-center gap-2">
-              <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-primary to-primary/60 rounded-full"
-                  style={{ width: `${source.score * 100}%` }}
-                />
+        <div className="space-y-2">
+          {sources.map((source, i) => (
+            <div
+              key={i}
+              className="rounded-xl border border-border bg-muted/30 px-3 py-2.5 space-y-1.5"
+            >
+              {/* Score */}
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Source {i + 1}
+                </span>
+                <span className={`
+                  text-[10px] font-bold px-2 py-0.5 rounded-full
+                  ${source.similarity >= 0.85
+                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                    : source.similarity >= 0.75
+                      ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                      : "bg-muted text-muted-foreground"
+                  }
+                `}>
+                  {Math.round(source.similarity * 100)}% match
+                </span>
               </div>
-              <span className="text-xs text-zinc-500">
-                {getScoreLabel(source.score)}
-              </span>
+
+              {/* Passage */}
+              <p className="text-xs text-foreground/80 leading-relaxed line-clamp-4">
+                {source.content}
+              </p>
             </div>
-            <button className="text-xs text-primary hover:text-primary/80 flex items-center gap-1">
-              <span>View in document</span>
-              <ExternalLink className="w-3 h-3" />
-            </button>
-          </div>
-        </motion.div>
+          ))}
+        </div>
       )}
-    </motion.div>
+    </div>
   )
 }

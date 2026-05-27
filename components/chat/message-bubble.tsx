@@ -1,103 +1,93 @@
 "use client"
 
-import { motion } from "framer-motion"
-import { User, Bot, Copy, CheckCheck, ThumbsUp, ThumbsDown } from "lucide-react"
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { Message } from "@/types"
 import { SourceCard } from "./source-card"
-import type { Message } from "@/types"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Bot, User } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-interface MessageBubbleProps {
+interface Props {
   message: Message
-  isLatest?: boolean
+  userName?: string | null
 }
 
-export function MessageBubble({ message, isLatest = false }: MessageBubbleProps) {
-  const [copied, setCopied] = useState(false)
-  const isUser = message.role === "user"
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(message.content)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+export function MessageBubble({ message, userName }: Props) {
+  const isUser      = message.role === "user"
+  const isEmpty     = !message.content && message.role === "assistant"
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}
-    >
+    <div className={cn(
+      "flex gap-3 w-full",
+      isUser ? "flex-row-reverse" : "flex-row"
+    )}>
+
       {/* Avatar */}
-      <div className={`flex-shrink-0 ${isUser ? "order-2" : "order-1"}`}>
-        <div className={`
-          w-8 h-8 rounded-xl flex items-center justify-center
-          ${isUser 
-            ? "bg-gradient-to-br from-primary to-primary/80" 
-            : "bg-gradient-to-br from-purple-500 to-pink-500"
+      <Avatar className="w-7 h-7 shrink-0 mt-0.5">
+        <AvatarFallback className={cn(
+          "text-[11px] font-bold",
+          isUser
+            ? "bg-primary/20 text-primary"
+            : "bg-muted text-muted-foreground"
+        )}>
+          {isUser
+            ? (userName?.charAt(0).toUpperCase() ?? <User size={12} />)
+            : <Bot size={12} />
           }
-        `}>
-          {isUser ? (
-            <User className="w-4 h-4 text-white" />
-          ) : (
-            <Bot className="w-4 h-4 text-white" />
-          )}
-        </div>
-      </div>
+        </AvatarFallback>
+      </Avatar>
 
-      {/* Message content */}
-      <div className={`flex-1 max-w-[80%] ${isUser ? "order-1" : "order-2"}`}>
-        <div className={`
-          rounded-2xl px-4 py-3
-          ${isUser 
-            ? "bg-gradient-to-r from-primary to-primary/80 text-white" 
-            : "bg-white/5 border border-white/10 text-zinc-200"
+      {/* Bubble */}
+      <div className={cn(
+        "flex flex-col max-w-[78%]",
+        isUser ? "items-end" : "items-start"
+      )}>
+        {/* Sender label */}
+        <span className="text-[10px] text-muted-foreground mb-1 px-1">
+          {isUser
+            ? (userName ?? "You • Vous")
+            : "DocMind AI"
           }
-        `}>
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">
-            {message.content}
-          </p>
+        </span>
+
+        {/* Content */}
+        <div className={cn(
+          "px-4 py-2.5 rounded-2xl text-sm leading-relaxed",
+          isUser
+            ? "bg-primary text-primary-foreground rounded-tr-sm"
+            : "bg-muted/60 text-foreground rounded-tl-sm border border-border/50"
+        )}>
+          {isEmpty
+            ? (
+              // Typing indicator
+              <div className="flex items-center gap-1 py-1">
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 animate-bounce"
+                    style={{ animationDelay: `${i * 0.15}s` }}
+                  />
+                ))}
+              </div>
+            )
+            : message.content
+          }
         </div>
 
-        {/* Sources for assistant messages */}
+        {/* Sources */}
         {!isUser && message.sources && message.sources.length > 0 && (
-          <div className="mt-3 space-y-2">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-              Sources ({message.sources.length})
-            </p>
-            <div className="space-y-2">
-              {message.sources.map((source, i) => (
-                <SourceCard key={i} source={source} />
-              ))}
-            </div>
+          <div className="w-full px-1 mt-1">
+            <SourceCard sources={message.sources} />
           </div>
         )}
 
-        {/* Actions */}
-        <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCopy}
-            className="h-7 px-2 text-xs text-zinc-500 hover:text-zinc-300"
-          >
-            {copied ? <CheckCheck className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-            <span className="ml-1">{copied ? "Copied!" : "Copy"}</span>
-          </Button>
-          
-          {!isUser && (
-            <>
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-zinc-500">
-                <ThumbsUp className="w-3 h-3" />
-              </Button>
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-zinc-500">
-                <ThumbsDown className="w-3 h-3" />
-              </Button>
-            </>
-          )}
-        </div>
+        {/* Timestamp */}
+        <span className="text-[10px] text-muted-foreground/60 mt-1 px-1">
+          {message.timestamp.toLocaleTimeString([], {
+            hour:   "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
       </div>
-    </motion.div>
+    </div>
   )
 }
