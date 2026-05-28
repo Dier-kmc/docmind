@@ -4,7 +4,8 @@ import { supabaseAdmin } from "@/lib/supabase"
 import { parseDocument, detectFileType } from "@/lib/documents/parser"
 import { chunkDocument } from "@/lib/documents/chunker"
 import { uploadFileToStorage } from "@/lib/documents/storage"
-import { generateBatchEmbeddings } from "@/lib/rag/embeddings" // 🎯 Import vector generator
+import { generateBatchEmbeddings } from "@/lib/rag/embeddings"
+import crypto from "crypto" // 🎯 Import natif de Node.js pour pré-générer les UUIDs du graphe
 
 export async function POST(req: NextRequest) {
   const session = await auth()
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
     // 3. Document Chunking
     const chunks = await chunkDocument(text)
 
-    // 4. Batch Vector Generation (Days 5-6 Implementation 🚀)
+    // 4. Batch Vector Generation
     const textContentArray = chunks.map(c => c.content)
     const vectorArrays = await generateBatchEmbeddings(textContentArray)
 
@@ -57,15 +58,38 @@ export async function POST(req: NextRequest) {
 
     if (docError) throw new Error(`Document DB entry failed: ${docError.message}`)
 
-    // 6. Vector Matrix Injection
-    const chunkRows = chunks.map((chunk, index) => ({
-      document_id: document.id,
-      user_id: userId,
-      content: chunk.content,
-      chunk_index: chunk.chunkIndex,
-      token_count: chunk.tokenCount,
-      embedding: vectorArrays[index], // 🎯 Attaching the calculated 1536 vector here
-    }))
+    // 🎯 STRATÉGIE GRAPHRAG (Jour 15) : Pré-génération des IDs pour le chaînage
+    // On crée un tableau d'identifiants uniques pour chaque chunk créé
+    const generatedIds = chunks.map(() => crypto.randomUUID())
+
+    // 6. Vector Matrix & Graph Connection Injection
+    const chunkRows = chunks.map((chunk, index) => {
+      const currentId = generatedIds[index]
+      // Le nœud précédent est le voisin direct à gauche (index - 1)
+      const prevChunkId = index > 0 ? generatedIds[index - 1] : null
+      // Le nœud suivant est le voisin direct à droite (index + 1)
+      const nextChunkId = index < chunks.length - 1 ? generatedIds[index + 1] : null
+
+      const sanitizedContent = chunk.content
+        .replace(/\0/g, '') // Supprime les caractères NUL
+        .replace(/\\u0000/g, '') // Sécurité supplémentaire pour la chaîne textuelle
+        .trim();
+
+      return {
+        id: currentId, // 🎯 On force notre UUID généré
+        document_id: document.id,
+        user_id: userId,
+        content: sanitizedContent,
+        chunk_index: chunk.chunkIndex,
+        token_count: chunk.tokenCount,
+        embedding: vectorArrays[index],
+        prev_chunk_id: prevChunkId, // 🔗 Arc du graphe (En arrière)
+        next_chunk_id: nextChunkId  // 🔗 Arc du graphe (En avant)
+      }
+    })
+
+    // Logging de contrôle dans ta console ThinkPad
+    console.log(`🔗 [GraphRAG Ingestion] Tissage du graphe linéaire pour ${chunks.length} chunks. ID Document: ${document.id}`)
 
     // Batch insert vector payload rows
     const { error: chunkError } = await db
@@ -77,7 +101,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       documentId: document.id,
       chunkCount: chunks.length,
-      message: "Vectorization Complete • Documents Embeddés",
+      message: "Vectorization and Graph Linkage Complete • Documents Graphed",
     })
 
   } catch (err: any) {

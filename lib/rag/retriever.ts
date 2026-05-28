@@ -24,7 +24,7 @@ export async function retrieveRelevantChunks(
   rawQuery: string,
   options: RetrieveOptions
 ): Promise<Source[]> {
-  const { documentId, userId, topK = 5, threshold = 0.25 } = options
+  const { documentId, userId, topK = 4, threshold = 0.25 } = options
   const db = supabaseAdmin()
 
   // 1. Nettoyage de la requête pour alignement sémantique

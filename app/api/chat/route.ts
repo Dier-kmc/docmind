@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 const getGemini = () => {
   if (!process.env.GOOGLE_API_KEY) throw new Error("Missing GOOGLE_API_KEY");
   return new GoogleGenerativeAI(process.env.GOOGLE_API_KEY).getGenerativeModel({ 
-    model: "gemini-2.5-flash"
+    model: "gemini-1.5-flash-lite"
   });
 };
 
