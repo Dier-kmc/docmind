@@ -2,9 +2,9 @@
 
 import dynamic from "next/dynamic"
 
-// 🎯 L'import dynamique avec ssr: false migre ici, en toute sécurité
+// 🎯 CORRECTION : On mappe explicitement l'export nommé vers la clé 'default' attendue par React
 const LazyPdfViewer = dynamic(
-  () => import("./pdf-viewer").then((mod) => mod.PdfViewer),
+  () => import("./pdf-viewer").then((mod) => ({ default: mod.PdfViewer })),
   {
     ssr: false,
     loading: () => (
