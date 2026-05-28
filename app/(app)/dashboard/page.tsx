@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { UploadZone } from "@/components/upload/upload-zone"
+import { FinOpsAnalytics } from "@/components/dashboard/finops-analytics"
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -10,7 +11,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex-1 flex items-center justify-center p-6 md:p-12 bg-background/50">
-      <div className="w-full max-w-xl mx-auto space-y-8">
+      <div className="w-full max-w-6xl mx-auto space-y-8">
         
         {/* Modern Minimal Header */}
         <div className="space-y-2 text-center">
@@ -21,6 +22,8 @@ export default async function DashboardPage() {
             Upload a document to train your custom context agent and start asking questions.
           </p>
         </div>
+
+        <FinOpsAnalytics />
 
         {/* Action Container Card */}
         <div className="bg-card text-card-foreground rounded-3xl border border-border/60 shadow-xl shadow-foreground/[0.02] p-2">

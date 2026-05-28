@@ -15,9 +15,12 @@ export interface Chunk {
 }
 
 export interface Source {
+  id: string
   content: string
   similarity: number
   chunk_index: number
+  next_chunk_id: string | null
+  prev_chunk_id: string | null
 }
 
 export interface Message {
