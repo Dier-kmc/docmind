@@ -1,6 +1,6 @@
 import { retrieveRelevantChunks } from "./retriever"
 import { buildContext, buildSystemPrompt } from "./context-builder"
-import { supabaseAdmin } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase-server"
 import { Source } from "@/types"
 
 interface PipelineInput {

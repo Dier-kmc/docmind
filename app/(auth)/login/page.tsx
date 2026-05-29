@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect, Suspense } from "react"
-import { signIn } from "next-auth/react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
+import { getSupabaseBrowser } from "@/lib/supabase" // 🎯 Import de votre client Supabase
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,25 +10,22 @@ import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
-
 function LoginForm() {
+  const router = useRouter()
   const searchParams = useSearchParams()
+  const supabase = getSupabaseBrowser()
+  
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
 
+  // Gestion des erreurs passées dans l'URL (par exemple via OAuth ou votre Proxy)
   useEffect(() => {
     const errorType = searchParams.get("error")
     if (errorType) {
-      if (errorType === "CredentialsSignin") {
-        toast.error("Authentication failed", {
-          description: "Invalid email or password. Please try again.",
-        })
-      } else {
-        toast.error("An error occurred", {
-          description: "Something went wrong during authentication.",
-        })
-      }
+      toast.error("Authentication failed", {
+        description: "Something went wrong during authentication. Please try again.",
+      })
     }
   }, [searchParams])
 
@@ -43,23 +40,47 @@ function LoginForm() {
     setLoading(true)
     const loginToast = toast.loading("Signing you in...")
 
-    try {
-      await signIn("credentials", {
-        email,
-        password,
-        redirectTo: "/dashboard",
-      })
-    } catch (error: any) {
-      toast.dismiss(loginToast)
-      setLoading(false)
+    // ➔ Connexion directe avec Supabase
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
 
-      if (error?.message === "NEXT_REDIRECT") {
-        throw error
-      }
+    toast.dismiss(loginToast)
 
+    if (error) {
       toast.error("Authentication failed", { 
-        description: "Invalid email or password. Please try again." 
+        description: error.message 
       })
+      setLoading(false)
+      return
+    }
+
+    toast.success("Welcome back!", { description: "Redirecting to your dashboard." })
+    
+    // 🎯 Option ultra-fiable : On utilise window.location pour forcer un cycle complet 
+    // et s'assurer que le proxy serveur lise proprement les cookies tout frais
+    setTimeout(() => {
+      window.location.href = "/dashboard"
+    }, 500)
+  
+  }
+
+  const handleGoogleLogin = async () => {
+    setLoading(true)
+    
+    // ➔ Connexion OAuth directe avec Supabase
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        // Redirige vers la route d'échange de token que nous avons créée précédemment
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+
+    if (error) {
+      toast.error("Google Auth failed", { description: error.message })
+      setLoading(false)
     }
   }
 
@@ -114,7 +135,7 @@ function LoginForm() {
             className="w-full"
             type="button"
             disabled={loading}
-            onClick={() => signIn("google", { redirectTo: "/dashboard" })}
+            onClick={handleGoogleLogin}
           >
             Continue with Google
           </Button>

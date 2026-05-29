@@ -1,17 +1,20 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
-import { supabaseAdmin } from "@/lib/supabase"
+import { getSupabaseServer, supabaseAdmin } from "@/lib/supabase-server"
 
 export async function GET() {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const supabaseServer = await getSupabaseServer()
+    const { data: { user } } = await supabaseServer.auth.getUser()
+  
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+  
+    const userId = user.id
 
   const { data, error } = await supabaseAdmin()
     .from("documents")
     .select("id, name, file_type, chunk_count, created_at")
-    .eq("user_id", session.user.id)
+    .eq("user_id", userId)
     .order("created_at", { ascending: false })
 
   if (error) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { signOut } from "next-auth/react"
+import { getSupabaseBrowser } from "@/lib/supabase" 
 import { DocumentItem } from "./document-item"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -41,6 +41,7 @@ interface Props {
 export function DocumentSidebar({ user }: Props) {
   const router   = useRouter()
   const params   = useParams()
+  const supabase = getSupabaseBrowser() // 🎯 Initialisation de l'instance
   const activeId = params?.docId as string | undefined
 
   const [documents, setDocuments] = useState<Document[]>([])
@@ -59,6 +60,17 @@ export function DocumentSidebar({ user }: Props) {
       setDocuments([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 🎯 Fonction de déconnexion Supabase
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut()
+      router.refresh() // Synchronise l'état global et vide le cache des routes
+      router.push("/login")
+    } catch (err) {
+      console.error("Erreur lors de la déconnexion :", err)
     }
   }
 
@@ -174,7 +186,7 @@ export function DocumentSidebar({ user }: Props) {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive cursor-pointer"
-              onClick={() => signOut({ callbackUrl: "/login" })}
+              onClick={handleSignOut} // 🎯 Changement vers la nouvelle fonction
             >
               <LogOut size={13} className="mr-2" />
               Se déconnecter

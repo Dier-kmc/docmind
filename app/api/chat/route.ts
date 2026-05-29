@@ -1,7 +1,6 @@
-import { auth } from "@/lib/auth";
 import { runRAGPipeline } from "@/lib/rag/pipeline";
 import { estimateTokens } from "@/lib/rag/context-builder";
-import { supabaseAdmin } from "@/lib/supabase";
+import { getSupabaseServer, supabaseAdmin } from "@/lib/supabase-server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -10,7 +9,7 @@ export const runtime = "nodejs";
 const getGemini = () => {
   if (!process.env.GOOGLE_API_KEY) throw new Error("Missing GOOGLE_API_KEY");
   return new GoogleGenerativeAI(process.env.GOOGLE_API_KEY).getGenerativeModel({ 
-    model: "gemini-1.5-flash-lite"
+    model: "gemini-2.5-flash-lite"
   });
 };
 
@@ -19,10 +18,14 @@ const getGemini = () => {
 const MEMORY_WINDOW_SIZE = 6; 
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const userId = session.user.id;
+  const supabaseServer = await getSupabaseServer()
+    const { data: { user } } = await supabaseServer.auth.getUser()
+  
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+  
+    const userId = user.id
 
   try {
     const { documentId, messages } = await req.json();

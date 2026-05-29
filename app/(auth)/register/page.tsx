@@ -2,8 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { signIn } from "next-auth/react"
-import { supabase } from "@/lib/supabase"
+import { getSupabaseBrowser } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,6 +18,8 @@ import {
 
 export default function RegisterPage() {
   const router = useRouter()
+  const supabase = getSupabaseBrowser() // Initialisation du client
+
   const [name, setName]         = useState("")
   const [email, setEmail]       = useState("")
   const [password, setPassword] = useState("")
@@ -37,14 +38,21 @@ export default function RegisterPage() {
     }
 
     setLoading(true)
+    const registerToast = toast.loading("Création de votre compte...")
 
+    // 1. Inscription native sur Supabase avec stockage du nom dans les métadonnées
     const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { name },
+        data: { 
+          name: name,
+          full_name: name // On met les deux clés par sécurité pour tes composants
+        },
       },
     })
+
+    toast.dismiss(registerToast)
 
     if (signUpError) {
       toast.error("Erreur d'inscription", { description: signUpError.message })
@@ -52,28 +60,46 @@ export default function RegisterPage() {
       return
     }
 
-    // Lance un toast de chargement pendant que NextAuth valide la session
+    // 2. Connexion automatique directe après l'inscription
     const authToast = toast.loading("Connexion automatique en cours...")
 
-    // 2. Connexion via NextAuth (Credentials Provider)
-    const res = await signIn("credentials", {
+    const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
-      redirect: false,
     })
 
-    if (res?.error) {
-      toast.dismiss(authToast)
+    toast.dismiss(authToast)
+
+    if (signInError) {
+      // Si l'inscription a marché mais que la connexion automatique coince (ex: email de confirmation requis configuré sur Supabase)
       toast.warning("Compte créé avec succès", {
-        description: "La connexion automatique a échoué. Redirection vers la page de connexion...",
+        description: "Veuillez vous connecter manuellement ou vérifier vos emails.",
       })
       setTimeout(() => router.push("/login"), 2000)
       return
     }
 
-    toast.success(authToast, { description: "Bienvenue sur Docmind !" })
+    // Succès total !
+    toast.success("Bienvenue sur Docmind !", { description: "Votre compte a été configuré." })
+    
+    // Redirection et rechargement des cookies d'authentification pour le Proxy
     router.push("/dashboard")
     router.refresh()
+  }
+
+  const handleGoogleLogin = async () => {
+    setLoading(true)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+
+    if (error) {
+      toast.error("Erreur Google Auth", { description: error.message })
+      setLoading(false)
+    }
   }
 
   return (
@@ -85,7 +111,6 @@ export default function RegisterPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {/* 💡 On englobe le tout dans un vrai composant HTML <form> pour gérer le raccourci "Entrée" proprement */}
         <form onSubmit={handleRegister} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nom complet</Label>
@@ -96,6 +121,7 @@ export default function RegisterPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={loading}
+              required
             />
           </div>
 
@@ -108,6 +134,7 @@ export default function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
+              required
             />
           </div>
 
@@ -120,11 +147,12 @@ export default function RegisterPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
+              required
             />
           </div>
 
           <Button
-            type="submit" // 💡 Déclenche le handleRegister automatiquement
+            type="submit"
             className="w-full font-semibold"
             disabled={loading}
           >
@@ -145,7 +173,7 @@ export default function RegisterPage() {
             className="w-full"
             type="button"
             disabled={loading}
-            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+            onClick={handleGoogleLogin}
           >
             Continuer avec Google
           </Button>

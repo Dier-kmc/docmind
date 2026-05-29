@@ -1,13 +1,24 @@
-import { auth } from "@/lib/auth"
+import { getSupabaseServer } from "@/lib/supabase-server" // 🎯 Ton nouveau client serveur
 import { redirect } from "next/navigation"
 import { UploadZone } from "@/components/upload/upload-zone"
 import { FinOpsAnalytics } from "@/components/dashboard/finops-analytics"
 
 export default async function DashboardPage() {
-  const session = await auth()
-  if (!session) redirect("/login")
+  // 1. Initialiser le client Supabase côté serveur
+  const supabase = await getSupabaseServer()
 
-  const firstName = session?.user?.name ? session.user.name.split(" ")[0] : ""
+  // 2. Récupérer l'utilisateur de manière sécurisée
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // 3. Si aucun utilisateur n'est connecté, redirection vers le login
+  if (!user) {
+    redirect("/login")
+  }
+
+  // 4. Extraire le prénom depuis les métadonnées de l'utilisateur (ou son profil)
+  // Supabase stocke généralement le nom complet dans user_metadata lors des connexions OAuth (Google)
+  const fullName = user.user_metadata?.full_name || user.email || ""
+  const firstName = fullName.includes(" ") ? fullName.split(" ")[0] : fullName
 
   return (
     <div className="flex-1 flex items-center justify-center p-6 md:p-12 bg-background/50">
