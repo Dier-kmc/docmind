@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,7 +10,6 @@ import { Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
 export default function LoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
@@ -27,26 +25,27 @@ export default function LoginPage() {
     setLoading(true)
     const loginToast = toast.loading("Signing you in...")
 
-    const res = await signIn("credentials", {
-      email,
-      password,
-      redirectTo: "/dashboard",
-    })
+    try {
+      // NextAuth v5 gère la redirection tout seul.
+      // Si c'est un succès, le navigateur est redirigé et ce thread s'arrête.
+      await signIn("credentials", {
+        email,
+        password,
+        redirectTo: "/dashboard", 
+      })
+      
+    } catch (error: any) {
+      toast.dismiss(loginToast)
+      setLoading(false)
 
-    toast.dismiss(loginToast)
-
-    // if (res?.) {
-    //   // Common NextAuth error mapping
-    //   toast.error("Authentication failed", { 
-    //     description: "Invalid email or password. Please try again." 
-    //   })
-    //   setLoading(false)
-    //   return
-    // }
-
-    toast.success("Welcome back!", { description: "Redirecting to your dashboard." })
-    router.push("/dashboard")
-    router.refresh()
+      // On intercepte uniquement les échecs de connexion.
+      // NextAuth renvoie généralement une structure contenant l'erreur.
+      if (error) {
+        toast.error("Authentication failed", { 
+          description: "Invalid email or password. Please try again." 
+        })
+      }
+    }
   }
 
   return (
@@ -67,6 +66,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
+                required
               />
             </div>
             <div className="space-y-2">
@@ -78,6 +78,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
+                required
               />
             </div>
             
@@ -99,7 +100,7 @@ export default function LoginPage() {
               className="w-full"
               type="button"
               disabled={loading}
-              onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+              onClick={() => signIn("google", { redirectTo: "/dashboard" })}
             >
               Continue with Google
             </Button>
