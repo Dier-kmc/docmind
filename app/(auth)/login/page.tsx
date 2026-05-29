@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { signIn } from "next-auth/react"
+import { useSearchParams } from "next/navigation" // Importé pour intercepter les erreurs d'URL
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,9 +11,26 @@ import { Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
 export default function LoginPage() {
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
+
+  // Détecter si NextAuth nous a renvoyé ici suite à une erreur (ex: mauvais mot de passe)
+  useEffect(() => {
+    const errorType = searchParams.get("error")
+    if (errorType) {
+      if (errorType === "CredentialsSignin") {
+        toast.error("Authentication failed", {
+          description: "Invalid email or password. Please try again.",
+        })
+      } else {
+        toast.error("An error occurred", {
+          description: "Something went wrong during authentication.",
+        })
+      }
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,23 +44,18 @@ export default function LoginPage() {
     const loginToast = toast.loading("Signing you in...")
 
     try {
-      const result = await signIn("credentials", {
+      await signIn("credentials", {
         email,
         password,
         redirectTo: "/dashboard",
-        redirect: true, // On laisse NextAuth gérer la redirection
       })
-
-      // Note: Avec redirect: true, ce code ne sera normalement jamais atteint en cas de succès
-      toast.dismiss(loginToast)
     } catch (error: any) {
       toast.dismiss(loginToast)
       setLoading(false)
 
-      // IMPORTANT: Si l'erreur contient "NEXT_REDIRECT", c'est que la connexion a RÉUSSI
-      // et que Next.js essaie de rediriger. On ne doit PAS afficher d'erreur.
+      // Si NextAuth lève l'exception de redirection interne, on la laisse passer
       if (error?.message === "NEXT_REDIRECT") {
-        throw error; // Laisse Next.js gérer la redirection
+        throw error
       }
 
       toast.error("Authentication failed", { 
