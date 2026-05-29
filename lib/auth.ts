@@ -1,7 +1,7 @@
-import NextAuth from "next-auth"
-import Google from "next-auth/providers/google"
-import Credentials from "next-auth/providers/credentials"
-import { supabaseAdmin } from "./supabase"
+import NextAuth from "next-auth";
+import Google from "next-auth/providers/google";
+import Credentials from "next-auth/providers/credentials";
+import { supabaseAdmin } from "./supabase";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -19,27 +19,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const { data, error } = await supabaseAdmin().auth.signInWithPassword({
           email: credentials.email as string,
           password: credentials.password as string,
-        })
-        if (error || !data.user) return null
+        });
+        console.log("Supabase auth result:", {
+          userId: data?.user?.id,
+          error: error?.message,
+        });
+        if (error || !data.user) return null;
         return {
           id: data.user.id,
           email: data.user.email,
           name: data.user.user_metadata?.name,
-        }
+        };
       },
     }),
   ],
   callbacks: {
     async session({ session, token }) {
-      if (token.sub) session.user.id = token.sub
-      return session
+      if (token.sub) session.user.id = token.sub;
+      return session;
     },
     async jwt({ token, user }) {
-      if (user) token.sub = user.id
-      return token
+      if (user) token.sub = user.id;
+      return token;
     },
   },
   pages: {
     signIn: "/login",
   },
-})
+});

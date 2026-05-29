@@ -30,19 +30,19 @@ export default function LoginPage() {
     const res = await signIn("credentials", {
       email,
       password,
-      redirect: false,
+      redirectTo: "/dashboard",
     })
 
     toast.dismiss(loginToast)
 
-    if (res?.error) {
-      // Common NextAuth error mapping
-      toast.error("Authentication failed", { 
-        description: "Invalid email or password. Please try again." 
-      })
-      setLoading(false)
-      return
-    }
+    // if (res?.) {
+    //   // Common NextAuth error mapping
+    //   toast.error("Authentication failed", { 
+    //     description: "Invalid email or password. Please try again." 
+    //   })
+    //   setLoading(false)
+    //   return
+    // }
 
     toast.success("Welcome back!", { description: "Redirecting to your dashboard." })
     router.push("/dashboard")
