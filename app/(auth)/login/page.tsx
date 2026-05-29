@@ -26,25 +26,28 @@ export default function LoginPage() {
     const loginToast = toast.loading("Signing you in...")
 
     try {
-      // NextAuth v5 gère la redirection tout seul.
-      // Si c'est un succès, le navigateur est redirigé et ce thread s'arrête.
-      await signIn("credentials", {
+      const result = await signIn("credentials", {
         email,
         password,
-        redirectTo: "/dashboard", 
+        redirectTo: "/dashboard",
+        redirect: true, // On laisse NextAuth gérer la redirection
       })
-      
+
+      // Note: Avec redirect: true, ce code ne sera normalement jamais atteint en cas de succès
+      toast.dismiss(loginToast)
     } catch (error: any) {
       toast.dismiss(loginToast)
       setLoading(false)
 
-      // On intercepte uniquement les échecs de connexion.
-      // NextAuth renvoie généralement une structure contenant l'erreur.
-      if (error) {
-        toast.error("Authentication failed", { 
-          description: "Invalid email or password. Please try again." 
-        })
+      // IMPORTANT: Si l'erreur contient "NEXT_REDIRECT", c'est que la connexion a RÉUSSI
+      // et que Next.js essaie de rediriger. On ne doit PAS afficher d'erreur.
+      if (error?.message === "NEXT_REDIRECT") {
+        throw error; // Laisse Next.js gérer la redirection
       }
+
+      toast.error("Authentication failed", { 
+        description: "Invalid email or password. Please try again." 
+      })
     }
   }
 
