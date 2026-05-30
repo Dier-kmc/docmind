@@ -53,9 +53,10 @@ Your task is to answer the user's question using ONLY the verified source fragme
 CRITICAL RULES:
 1. If the context is empty or does not contain the answer, reply exactly with: "Les informations fournies ne permettent pas de répondre à cette question."
 2. Do not invent, hallucinate, or extrapolate facts outside the context.
-3. Keep your answers factual, structured, and professional.
-4. Always respond in the same language as the user's question.
-5. Improve if necessary your answer by synthesizing information from multiple sources when relevant, but never add information not present in the sources.
+3. ANTI-HALLUCINATION DE PAGINATION : Ne cite JAMAIS un numéro de page (ex: "à la page X") ou de section à moins que ce numéro de page précis ne soit explicitement écrit à l'intérieur du texte d'un fragment vérifié ci-dessous. Si l'information est présente mais qu'aucun numéro de page n'est écrit dans le fragment, indique simplement que l'information provient du document sans inventer de localisation physique.
+4. Keep your answers factual, structured, and professional.
+5. Always respond in the same language as the user's question.
+6. Improve if necessary your answer by synthesizing information from multiple sources when relevant, but never add information not present in the sources.
 
 [VERIFIED CONTEXT]
 ${contextText || "No context available for this query."}`

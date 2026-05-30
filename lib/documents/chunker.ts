@@ -1,29 +1,37 @@
 // import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters"
 
-// export interface Chunk {
+// interface DocumentChunk {
 //   content: string
 //   chunkIndex: number
 //   tokenCount: number
 // }
 
-// export async function chunkDocument(text: string): Promise<Chunk[]> {
+// /**
+//  * Splits document text into manageable contextual fragments
+//  * Optimized for OpenAI text-embedding-3-small token bounds
+//  */
+// export async function chunkDocument(text: string): Promise<DocumentChunk[]> {
 //   const splitter = new RecursiveCharacterTextSplitter({
-//     chunkSize: 1000,
-//     chunkOverlap: 200,
-//     separators: ["\n\n", "\n", ". ", " ", ""],
+//     chunkSize: 600,       // Targeted character window limit (~150 tokens)
+//     chunkOverlap: 60,     // Window overlap to preserve multi-sentence contexts
+//     separators: ["\n\n", "\n", ". ", "? ", "! ", " ", ""],
 //   })
 
-//   const docs = await splitter.createDocuments([text])
+//   const output = await splitter.createDocuments([text])
 
-//   return docs.map((doc, index) => ({
-//     content: doc.pageContent,
-//     chunkIndex: index,
-//     // Estimation simple : 1 token ≈ 4 caractères
-//     tokenCount: Math.ceil(doc.pageContent.length / 4),
-//   }))
+//   return output.map((doc, index) => {
+//     // Structural approximation of token density (1 token ≈ 4 characters)
+//     const tokenEstimation = Math.ceil(doc.pageContent.length / 4)
+
+//     return {
+//       content: doc.pageContent,
+//       chunkIndex: index,
+//       tokenCount: tokenEstimation,
+//     }
+//   })
 // }
 
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters"
+import { MarkdownTextSplitter } from "@langchain/textsplitters"
 
 interface DocumentChunk {
   content: string
@@ -32,20 +40,20 @@ interface DocumentChunk {
 }
 
 /**
- * Splits document text into manageable contextual fragments
- * Optimized for OpenAI text-embedding-3-small token bounds
+ * Splits document text into manageable structural fragments.
+ * Optimized for layout preservation (MoSCoW tables, architecture stacks).
  */
 export async function chunkDocument(text: string): Promise<DocumentChunk[]> {
-  const splitter = new RecursiveCharacterTextSplitter({
-    chunkSize: 600,       // Targeted character window limit (~150 tokens)
-    chunkOverlap: 60,     // Window overlap to preserve multi-sentence contexts
-    separators: ["\n\n", "\n", ". ", "? ", "! ", " ", ""],
+  // 🎯 Correction Angle Mort 1 : Utilisation du MarkdownTextSplitter + Augmentation drastique de l'overlap
+  const splitter = new MarkdownTextSplitter({
+    chunkSize: 800,       // Fenêtre de caractères élargie (~200 tokens)
+    chunkOverlap: 200,    // Recouvrement de 25% pour préserver les jointures de tableaux/stacks
   })
 
   const output = await splitter.createDocuments([text])
 
   return output.map((doc, index) => {
-    // Structural approximation of token density (1 token ≈ 4 characters)
+    // Approximation structurelle de la densité de tokens (1 token ≈ 4 caractères)
     const tokenEstimation = Math.ceil(doc.pageContent.length / 4)
 
     return {

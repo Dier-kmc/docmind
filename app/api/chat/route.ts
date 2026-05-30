@@ -3,6 +3,8 @@ import { estimateTokens } from "@/lib/rag/context-builder";
 import { getSupabaseServer, supabaseAdmin } from "@/lib/supabase-server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
+import { isRateLimited } from "@/lib/limiter";
+
 
 export const runtime = "nodejs"; 
 
@@ -13,8 +15,7 @@ const getGemini = () => {
   });
 };
 
-// 🎯 CONFIGURATION DE LA MÉMOIRE (JOUR 13)
-// 6 messages = les 3 dernières requêtes de l'utilisateur + les 3 dernières réponses de l'IA
+
 const MEMORY_WINDOW_SIZE = 6; 
 
 export async function POST(req: NextRequest) {
@@ -27,6 +28,14 @@ export async function POST(req: NextRequest) {
   
     const userId = user.id
 
+    if (isRateLimited(userId)) {
+      console.warn(`⚠️ [RATE LIMIT] User ${userId} has exhausted their token bucket quota.`);
+      return NextResponse.json(
+        { error: "Too many requests. Please slow down. • Limite d'usage atteinte." }, 
+        { status: 429 }
+      );
+    }
+
   try {
     const { documentId, messages } = await req.json();
     if (!documentId || !messages?.length) return NextResponse.json({ error: "Missing data" }, { status: 400 });
@@ -34,12 +43,9 @@ export async function POST(req: NextRequest) {
     const lastMessage = messages[messages.length - 1];
     const query = lastMessage.content;
 
-    // 1. Extraction de l'historique récent pour le pipeline (Memory Window)
-    // On exclut le tout dernier message (qui est la query actuelle) avant de couper
     const fullHistory = messages.slice(0, -1);
     const recentHistoryForPipeline = fullHistory.slice(-MEMORY_WINDOW_SIZE);
 
-    // 2. Pipeline RAG avec injection de l'historique récent
     const { systemPrompt, sources } = await runRAGPipeline({
       query,
       documentId,
@@ -49,8 +55,6 @@ export async function POST(req: NextRequest) {
 
     const inputTokens = estimateTokens(systemPrompt + query);
 
-    // 3. Formatage strict et filtré de l'historique pour l'API Gemini
-    // On applique également la MEMORY_WINDOW_SIZE ici pour synchroniser le chat Gemini
     const history = recentHistoryForPipeline
       .filter((m: any) => m.content?.trim() !== "" && m.role !== "system")
       .map((m: any) => ({
@@ -68,7 +72,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Logging de contrôle pour valider le Jour 13 dans ta console
     console.log(`🧠 [MEMORY WINDOW] Total messages in state: ${messages.length} | Sent to Gemini: ${history.length + 1}`);
 
     const result = await chat.sendMessageStream(query);
@@ -89,7 +92,6 @@ export async function POST(req: NextRequest) {
           }
           controller.enqueue(encoder.encode("data: [DONE]\n"));
 
-          // 🧮 Enregistrement FinOps
           const outputTokens = estimateTokens(fullOutputText);
           const totalCost = (inputTokens * (0.075 / 1000000)) + (outputTokens * (0.30 / 1000000));
 

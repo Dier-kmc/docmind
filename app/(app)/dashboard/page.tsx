@@ -17,7 +17,7 @@ export default async function DashboardPage() {
 
   // 4. Extraire le prénom depuis les métadonnées de l'utilisateur (ou son profil)
   // Supabase stocke généralement le nom complet dans user_metadata lors des connexions OAuth (Google)
-  const fullName = user.user_metadata?.full_name || user.email || ""
+  const fullName = user.user_metadata?.name || user.email || ""
   const firstName = fullName.includes(" ") ? fullName.split(" ")[0] : fullName
 
   return (
